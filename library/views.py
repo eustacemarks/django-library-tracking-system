@@ -52,3 +52,22 @@ class MemberViewSet(viewsets.ModelViewSet):
 class LoanViewSet(viewsets.ModelViewSet):
     queryset = Loan.objects.all()
     serializer_class = LoanSerializer
+    
+    @action(detail=True, methods=['post'])
+    def extend_due_date(self, request, pk=None):
+        additional_days = request.data.get('additional_days')
+        
+        if not additional_days:
+            return Response({'error': 'Missing additional_days field.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        loan = self.get_object()
+
+        if loan.due_date >= date.today():
+            return Response({'error': 'Due date is pending.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if int(additional_days) <= 0:
+            return Response({'error': 'Due date should be a positive number.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        loan.due_date += timedelta(days=int(additional_days))
+        loan.save()
+        return Response({'status': 'Additional days added.'}, status=status.HTTP_200_OK)
